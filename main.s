@@ -1,27 +1,32 @@
 
-.globl start
-start:
-movq $0x9, %rax // mmap
-xorq %rdi, %rdi // addr: null
-movq $0x1000, %rsi // len: a page
-movq $0x3, %rdx // prot: PROT_READ | PROT_WRITE
-movq $0x2, %r10 // flags: MAP_PRIVATE
-movq $0xffffffff, %r8 // fd: -1
-movq $0x0, %r9 // offset: 0
-syscall
-cmpq $0x0, %rax
-jg .mmapnoerr
-// damn you mmap!
-movq %rax, %rdi
-movq $0xc3, %rax
-syscall
+	global _start
+
+	section .text
+
+_start:
+	mov rax, 9      ; mmap
+	xor rdi, rdi    ; addr: null
+	mov rsi, 0x1000 ; len: a page
+	mov rdx, 0x3    ; prot: PROT_READ | PROT_WRITE
+	mov r10, 0x22   ; flags: MAP_PRIVATE | MAP_ANONYMOUS
+	mov r8, -1      ; fd: -1
+	xor r9, r9      ; offset: 0
+	syscall
+	cmp rax, 0
+	jg .mmapnoerr
+
+	; mmap has failed, exit with syscall
+	mov rdi, rax
+	neg rdi ; mmap returns -errno
+	mov rax, 60
+	syscall
+
 .mmapnoerr:
-movq %rax, %rbp
-movq %rbp, %rsp
-pushq %rbp
-pushq $0x1
-pushq $0x2
-// exit
-movq $0x0, %rdi
-movq $0xc3, %rax
-syscall
+	add rax, 0x1000 ; top of stack
+	mov rbp, rax
+	mov rsp, rbp
+	push rbp
+	; exit
+	xor rdi, rdi
+	mov rax, 60
+	syscall
